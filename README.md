@@ -36,19 +36,3 @@
 7. Release your app for *Production* or *Staging* with `yarn release`
 8. Build your code with Docker `docker build -t yourname/express:v1.0.0 .`
 9. Run with docker image `docker run -p 7000:8000 -d yourname/express:v1.0.0`
-
-## Author
-
-[**masb0ymas** (Resume)](https://resume.masb0ymas.com)
-
-[![Github](https://badges.aleen42.com/src/github.svg)](https://github.com/masb0ymas)
-[![Twitter](https://badges.aleen42.com/src/twitter.svg)](https://twitter.com/masb0ymas)
-[![Linkedin](https://img.shields.io/badge/Linkedin-Informational?logo=linkedin&color=0A66C2&logoColor=white)](https://www.linkedin.com/in/masb0ymas)
-
-## Support Me
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/I2I03MVAI)
-
-[<img height="40" src="https://trakteer.id/images/mix/navbar-logo-lite.png">](https://trakteer.id/masb0ymas)
-
-[<img height="40" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/PayPal.svg/1280px-PayPal.svg.png">](https://www.paypal.com/paypalme/masb0ymas)
