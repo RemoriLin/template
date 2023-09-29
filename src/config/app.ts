@@ -26,7 +26,7 @@ import { env } from './env'
 import { i18n } from './i18n'
 import { mailService } from './mail'
 import { httpLogger, logger } from './pino'
-import { storageService } from './storage'
+// import { storageService } from './storage'
 
 /**
  * Initialize Bootsrap Application
@@ -79,7 +79,7 @@ export class App {
    */
   private _provider(): void {
     // storage
-    void storageService.initialize()
+    // void storageService.initialize()
 
     // mail
     if (env.MAIL_USERNAME && env.MAIL_PASSWORD) {

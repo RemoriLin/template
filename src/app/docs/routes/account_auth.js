@@ -10,7 +10,7 @@ module.exports = {
             schema: {
               type: 'object',
               properties: {
-                fullname: {
+                username: {
                   type: 'string',
                 },
                 email: {
@@ -33,8 +33,9 @@ module.exports = {
                 },
               },
               required: [
-                'fullname',
+                'username',
                 'email',
+                'phone',
                 'new_password',
                 'confirm_new_password',
                 'roleAs',
@@ -83,6 +84,38 @@ module.exports = {
       responses: {
         200: {
           description: 'Login Your Account',
+        },
+      },
+    },
+  },
+  '/auth/verify-otp': {
+    post: {
+      tags: ['Account - Auth'],
+      summary: 'Verify otp to activate account',
+      security: [
+        {
+          auth_token: [],
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/x-www-form-urlencoded': {
+            schema: {
+              type: 'object',
+              properties: {
+                otp: {
+                  type: 'string',
+                },
+              },
+              required: ['otp'],
+            },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: 'Verify otp to activate account',
         },
       },
     },

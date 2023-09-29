@@ -1,12 +1,12 @@
 'use strict'
 
-import { DataTypes, QueryInterface } from 'sequelize'
+import { DataTypes, QueryInterface, Sequelize as SEQUELIZE } from 'sequelize'
 
 export async function up(
   queryInterface: QueryInterface,
   Sequelize: typeof DataTypes
 ) {
-  await queryInterface.createTable('upload', {
+  await queryInterface.createTable('live', {
     id: {
       allowNull: false,
       primaryKey: true,
@@ -24,29 +24,26 @@ export async function up(
     deleted_at: {
       type: Sequelize.DATE,
     },
-    key_file: {
+    is_private: {
       allowNull: false,
-      type: Sequelize.STRING,
+      type: Sequelize.BOOLEAN,
     },
-    filename: {
-      allowNull: false,
-      type: Sequelize.STRING,
-    },
-    mimetype: {
-      allowNull: false,
-      type: Sequelize.STRING,
-    },
-    size: {
+    price: {
       allowNull: false,
       type: Sequelize.INTEGER,
     },
-    signed_url: {
+    is_live: {
       allowNull: false,
-      type: Sequelize.TEXT,
+      type: Sequelize.BOOLEAN,
     },
-    expiry_date_url: {
+    host_id: {
       allowNull: false,
-      type: Sequelize.DATE,
+      type: Sequelize.UUID,
+      defaultValue: Sequelize.UUIDV4,
+      references: {
+        model: 'user',
+        key: 'id',
+      },
     },
   })
 }
@@ -55,5 +52,5 @@ export async function down(
   queryInterface: QueryInterface,
   Sequelize: typeof DataTypes
 ) {
-  await queryInterface.dropTable('upload')
+  await queryInterface.dropTable('live')
 }

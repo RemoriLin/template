@@ -20,6 +20,9 @@ import userSchema from '../schema/user.schema'
 import OpenStreetMapService from './provider/osm.service'
 import SessionService from './session.service'
 import UserService from './user.service'
+import bcrypt from 'bcrypt'
+import { hashing } from '~/config/hashing'
+import { sendSMS } from '~/core/utils/sendSms'
 
 export default class AuthService {
   /**
@@ -27,7 +30,7 @@ export default class AuthService {
    * @param formData
    * @returns
    */
-  public static async signUp(formData: any): Promise<User> {
+  public static async signUp(formData: any) {
     const uid = uuidv4()
 
     const { token } = useToken.generate({
@@ -46,7 +49,6 @@ export default class AuthService {
     const newFormData: UserAttributes = {
       ...formData,
       is_active: false,
-      phone: validateEmpty(formData.phone),
       token_verify: token,
       role_id,
       upload_id: null,
@@ -56,20 +58,50 @@ export default class AuthService {
 
     const formRegister: any = {
       ...value,
-      password: value.confirm_new_password,
+      password: await hashing.hash(value.confirm_new_password),
     }
 
-    const newData = await User.create({ ...formRegister })
+    const otpNumber = `${Math.floor(100000 + Math.random() * 900000)}`
 
-    // send mail if mail username & password exists
-    if (env.MAIL_USERNAME && env.MAIL_PASSWORD) {
-      await SendMail.accountRegistration({
-        email: formData.email,
-        fullname: formData.fullname,
-      })
+    const currentDate = new Date()
+    currentDate.setDate(currentDate.getDate() + 1)
+
+    const newData = await User.create({
+      ...formRegister,
+      otp: bcrypt.hashSync(otpNumber, 7),
+      otp_expired_date: new Date(new Date().getTime() + 5 * 60000),
+    })
+
+    return { newData, otpNumber }
+  }
+
+  /**
+   *
+   * @param id
+   * @param otp
+   * @param options
+   * @returns
+   */
+  public static async verifyOtp(
+    id: string,
+    otp: string,
+    options?: IReqOptions
+  ) {
+    const i18nOpt: string | TOptions = { lng: options?.lang }
+
+    const user = await User.findByPk(id)
+    if (!user) {
+      const message = i18n.t('errors.account_not_found', i18nOpt)
+      throw new ResponseError.NotFound(message)
     }
-
-    return newData
+    const compareOtp = bcrypt.compareSync(otp, user.otp)
+    if (!compareOtp)
+      throw new ResponseError.BadRequest('Harap masukan code otp yang sesuai')
+    if (new Date() > new Date(user.otp_expired_date)) {
+      throw new ResponseError.BadRequest('Code otp sudah kadaluarsa')
+    }
+    await user.update({ isActive: true, otp: '' }, { where: { id: user.id } })
+    return 'Verifikasi code otp berhasil'
   }
 
   /**
@@ -96,11 +128,11 @@ export default class AuthService {
       throw new ResponseError.NotFound(message)
     }
 
-    // check active account
-    if (!getUser.is_active) {
-      const message = i18n.t('errors.please_check_your_email', i18nOpt)
-      throw new ResponseError.BadRequest(message)
-    }
+    // // check active account
+    // if (!getUser.is_active) {
+    //   const message = i18n.t('errors.please_check_your_email', i18nOpt)
+    //   throw new ResponseError.BadRequest(message)
+    // }
 
     const matchPassword = await getUser.comparePassword(value.password)
 
@@ -140,7 +172,7 @@ export default class AuthService {
       expiresIn,
       tokenType: 'Bearer',
       user: payloadToken,
-      fullname: getUser.fullname,
+      username: getUser.username,
     }
 
     return newData

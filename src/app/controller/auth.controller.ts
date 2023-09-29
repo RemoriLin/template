@@ -13,6 +13,8 @@ import route from '~/routes/v1'
 import authorization from '../middleware/authorization'
 import AuthService from '../service/auth.service'
 import SessionService from '../service/session.service'
+import { permissionAccess } from '../middleware/permission'
+import ConstRole from '~/core/constants/ConstRole'
 
 route.post(
   '/auth/sign-up',
@@ -23,10 +25,27 @@ route.post(
 
     const formData = req.getBody()
 
-    await AuthService.signUp(formData)
+    const data = await AuthService.signUp(formData)
     const message = i18n.t('success.register', i18nOpt)
 
-    const httpResponse = HttpResponse.get({ message })
+    const httpResponse = HttpResponse.created({ data })
+    res.status(200).json(httpResponse)
+  })
+)
+
+route.post(
+  '/auth/verify-otp',
+  authorization,
+  asyncHandler(async function signUp(req: Request, res: Response) {
+    const { lang } = req.getQuery()
+    const defaultLang = lang ?? env.APP_LANG
+    const i18nOpt: string | TOptions = { lng: defaultLang }
+    const user_id = req.getState('userLogin.uid')
+    const formData = req.getBody()
+
+    await AuthService.verifyOtp(user_id, formData.otp)
+
+    const httpResponse = HttpResponse.updated('Code OTP berhasil di verifikasi')
     res.status(200).json(httpResponse)
   })
 )
@@ -63,6 +82,21 @@ route.post(
         secure: process.env.NODE_ENV === 'production',
       })
       .json(httpResponse)
+  })
+)
+
+route.put(
+  '/auth/verify-otp',
+  authorization,
+  permissionAccess([ConstRole.ID_USER]),
+  asyncHandler(async function (req: Request, res: Response) {
+    const { otp } = req.getBody()
+    const user = req.getState('userLogin') as UserLoginAttributes
+    const data = await AuthService.verifyOtp(user.uid, otp)
+    res.status(200).json({
+      message: 'success',
+      data,
+    })
   })
 )
 

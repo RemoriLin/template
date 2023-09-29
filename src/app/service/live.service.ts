@@ -1,9 +1,8 @@
 import { type Request } from 'express'
-import { validateBoolean, validateEmpty } from 'expresso-core'
-import { useSequelize } from 'expresso-query'
+import { validateBoolean } from 'expresso-core'
 import { type TOptions } from 'i18next'
 import _ from 'lodash'
-import { Op, type Includeable } from 'sequelize'
+import { Op, Sequelize } from 'sequelize'
 import { env } from '~/config/env'
 import { i18n } from '~/config/i18n'
 import { type IReqOptions } from '~/core/interface/ReqOptions'
@@ -11,40 +10,31 @@ import { type DtoFindAll } from '~/core/interface/dto/Paginate'
 import { useQuery } from '~/core/modules/hooks/useQuery'
 import ResponseError from '~/core/modules/response/ResponseError'
 import { validateUUID } from '~/core/utils/formatter'
-import Role from '~/database/entities/Role'
-import Session from '~/database/entities/Session'
-import User, { type UserAttributes } from '~/database/entities/User'
-import userSchema from '../schema/user.schema'
+import Live, { type LiveAttributes } from '~/database/entities/Live'
+import liveSchema from '../schema/live.schema'
+import LiveSession from '~/database/entities/LiveSession'
+import { UserAttributes, UserEntity } from '~/database/entities/User'
 
-const relations: Includeable[] = [{ model: Role }, { model: Session }]
-
-export default class UserService {
+export default class LiveService {
   /**
    *
    * @param req
    * @returns
    */
-  public static async findAll(req: Request): Promise<DtoFindAll<User>> {
+  public static async findAll(req: Request): Promise<DtoFindAll<Live>> {
     const reqQuery = req.getQuery()
 
     const defaultLang = reqQuery.lang ?? env.APP_LANG
     const i18nOpt: string | TOptions = { lng: defaultLang }
 
-    const query = useQuery({
-      entity: User,
-      reqQuery,
-      includeRule: useSequelize.makeIncludeQueryable(
-        reqQuery.filtered,
-        relations
-      ),
-    })
+    const query = useQuery({ entity: Live, reqQuery, includeRule: [] })
 
-    const data = await User.findAll({
+    const data = await Live.findAll({
       ...query,
       order: query.order ? query.order : [['created_at', 'desc']],
     })
 
-    const total = await User.count({
+    const total = await Live.count({
       include: query.includeCount,
       where: query.where,
     })
@@ -53,27 +43,20 @@ export default class UserService {
     return { message: `${total} ${message}`, data, total }
   }
 
-  /**
-   * Find By Id
-   * @param id
-   * @param options
-   * @returns
-   */
-  public static async _findOne(
+  public static async findById(
     id: string,
     options?: IReqOptions
-  ): Promise<User> {
+  ): Promise<Live> {
     const i18nOpt: string | TOptions = { lng: options?.lang }
 
     const newId = validateUUID(id, { ...options })
-    const data = await User.findOne({
+    const data = await Live.findOne({
       where: { id: newId },
-      include: options?.include,
       paranoid: options?.paranoid,
     })
 
     if (!data) {
-      const options = { ...i18nOpt, entity: 'user' }
+      const options = { ...i18nOpt, entity: 'live' }
       const message = i18n.t('errors.not_found', options)
 
       throw new ResponseError.NotFound(message)
@@ -83,35 +66,21 @@ export default class UserService {
   }
 
   /**
-   * Find By Id
-   * @param id
-   * @param options
-   * @returns
-   */
-  public static async findById(
-    id: string,
-    options?: IReqOptions
-  ): Promise<User> {
-    const data = await this._findOne(id, {
-      ...options,
-      include: [{ model: Role }, { model: Session }],
-    })
-
-    return data
-  }
-
-  /**
    *
    * @param formData
    * @returns
    */
-  public static async create(formData: UserAttributes): Promise<User> {
-    const value = userSchema.create.parse({
-      ...formData,
-      phone: validateEmpty(formData.phone),
-    })
+  public static async create(
+    formData: LiveAttributes,
+    host_id: string
+  ): Promise<Live> {
+    const value = liveSchema.create.parse(formData)
 
-    const data = await User.create(value)
+    const data = await Live.create({
+      ...value,
+      is_live: true,
+      host_id,
+    })
 
     return data
   }
@@ -125,69 +94,16 @@ export default class UserService {
    */
   public static async update(
     id: string,
-    formData: UserAttributes,
+    formData: LiveAttributes,
     options?: IReqOptions
-  ): Promise<User> {
-    const data = await this._findOne(id, { ...options })
+  ): Promise<Live> {
+    const data = await this.findById(id, { ...options })
 
-    // validate email from request
-    if (!_.isEmpty(formData.email) && formData.email !== data.email) {
-      await this.validateEmail(String(formData.email), { ...options })
-    }
+    const value = liveSchema.create.parse({ ...data, ...formData })
 
-    const value = userSchema.create.parse(formData)
-
-    const newFormData = {
-      ...data,
-      ...value,
-      phone: validateEmpty(value?.phone),
-      password: validateEmpty(value?.confirm_new_password),
-    }
-
-    const newData = await data.update({ ...data, ...newFormData })
+    const newData = await data.update({ ...data, ...value })
 
     return newData
-  }
-
-  /**
-   *
-   * @param id
-   * @param formData
-   * @param options
-   */
-  public static async changePassword(
-    id: string,
-    formData: Partial<UserAttributes>,
-    options?: IReqOptions
-  ): Promise<void> {
-    const i18nOpt: string | TOptions = { lng: options?.lang }
-
-    const value = userSchema.changePassword.parse(formData)
-
-    const newId = validateUUID(id, { ...options })
-    const getUser = await User.scope('withPassword').findOne({
-      where: { id: newId },
-    })
-
-    // check user account
-    if (!getUser) {
-      const message = i18n.t('errors.account_not_found', i18nOpt)
-      throw new ResponseError.NotFound(message)
-    }
-
-    const matchPassword = await getUser.comparePassword(value.current_password)
-
-    // compare password
-    if (!matchPassword) {
-      const message = i18n.t('errors.incorrect_current_pass', i18nOpt)
-      throw new ResponseError.BadRequest(message)
-    }
-
-    // update password
-    await getUser.update({
-      ...getUser,
-      password: value.confirm_new_password,
-    })
   }
 
   /**
@@ -199,7 +115,7 @@ export default class UserService {
     id: string,
     options?: IReqOptions
   ): Promise<void> {
-    const data = await this._findOne(id, { ...options, paranoid: false })
+    const data = await this.findById(id, { ...options, paranoid: false })
     await data.restore()
   }
 
@@ -215,7 +131,7 @@ export default class UserService {
     // if true = force delete else soft delete
     const isForce = validateBoolean(options?.force)
 
-    const data = await this._findOne(id, { ...options })
+    const data = await this.findById(id, { ...options })
     await data.destroy({ force: isForce })
   }
 
@@ -270,7 +186,7 @@ export default class UserService {
   ): Promise<void> {
     this._validateGetByIds(ids, options)
 
-    await User.restore({ where: { id: { [Op.in]: ids } } })
+    await Live.restore({ where: { id: { [Op.in]: ids } } })
   }
 
   /**
@@ -288,7 +204,7 @@ export default class UserService {
     // if true = force delete else soft delete
     const isForce = validateBoolean(options?.force)
 
-    await User.destroy({ where: { id: { [Op.in]: ids } }, force: isForce })
+    await Live.destroy({ where: { id: { [Op.in]: ids } }, force: isForce })
   }
 
   /**
@@ -319,22 +235,45 @@ export default class UserService {
 
   /**
    *
-   * @param email
+   * @param id
    * @param options
    */
-  public static async validateEmail(
-    email: string,
+  public static async joinLive(
+    id: string,
+    user_id: string,
     options?: IReqOptions
   ): Promise<void> {
-    const i18nOpt: string | TOptions = { lng: options?.lang }
+    const getLive = await Live.findOne({ where: { id } })
 
-    const data = await User.findOne({
-      where: { email },
+    if (!getLive) {
+      throw new ResponseError.NotFound('Live tidak ditemukan')
+    }
+
+    const getSession = await LiveSession.findOne({
+      where: { user_id: String(user_id) },
     })
 
-    if (data) {
-      const message = i18n.t('errors.already_email', i18nOpt)
-      throw new ResponseError.BadRequest(message)
+    if (!getSession) {
+      await LiveSession.create({ live_id: getLive.id, user_id })
+    } else {
+      await getSession.update({ ...getSession })
     }
+  }
+
+  /**
+   *
+   * @param id
+   * @param options
+   */
+  public static async stopLive(
+    id: string,
+    options?: IReqOptions
+  ): Promise<void> {
+    const getLive = await Live.findOne({ where: { id } })
+
+    if (!getLive) {
+      throw new ResponseError.NotFound('Live tidak ditemukan')
+    }
+    await getLive.update({ is_live: false })
   }
 }

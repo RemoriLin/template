@@ -18,20 +18,21 @@ import { hashing } from '~/config/hashing'
 import Base, { type IBaseEntity } from './Base'
 import Role from './Role'
 import Session from './Session'
-import Upload from './Upload'
+import Live from './Live'
 
-interface UserEntity extends IBaseEntity {
+export interface UserEntity extends IBaseEntity {
   deleted_at?: Date | null
-  fullname: string
+  username: string
   email: string
   password?: string | null
-  phone?: string | null
-  token_verify?: string | null
+  phone: string
   is_active?: boolean | null
   is_blocked?: boolean | null
   upload_id?: string | null
   role_id: string
-
+  photo?: string | null
+  otp?: string | null
+  otp_expired_date?: Date | null
   // virtual field
   new_password?: string | null
   confirm_new_password?: string | null
@@ -55,7 +56,7 @@ export type UserAttributes = Omit<
 
 @DefaultScope(() => ({
   attributes: {
-    exclude: ['password', 'token_verify'],
+    exclude: ['password'],
   },
 }))
 @Scopes(() => ({
@@ -68,7 +69,7 @@ class User extends Base {
   deleted_at?: Date
 
   @Column({ allowNull: false })
-  fullname: string
+  username: string
 
   @Unique
   @Column({ allowNull: false })
@@ -78,10 +79,10 @@ class User extends Base {
   password?: string
 
   @Column({ type: DataType.STRING('20') })
-  phone?: string
+  phone: string
 
-  @Column({ type: DataType.TEXT })
-  token_verify?: string
+  @Column({ type: DataType.STRING })
+  photo: string
 
   @Column({
     type: DataType.BOOLEAN,
@@ -107,23 +108,20 @@ class User extends Base {
   role_id: string
 
   @BelongsTo(() => Role)
-  role: Role
-
-  @IsUUID(4)
-  @ForeignKey(() => Upload)
-  @Column({
-    type: DataType.UUID,
-    defaultValue: DataType.UUIDV4,
-  })
-  upload_id: string
-
-  // many to one
-  @BelongsTo(() => Upload)
-  upload?: Upload
+  role: Awaited<Role>
 
   // one to many
   @HasMany(() => Session)
-  sessions: Session[]
+  sessions: Awaited<Session[]>
+
+  @HasMany(() => Live)
+  lives: Awaited<Live[]>
+
+  @Column({ type: DataType.STRING })
+  otp: string
+
+  @Column({ type: DataType.DATE })
+  otp_expired_date: Date
 
   @Column({ type: DataType.VIRTUAL })
   new_password: string
@@ -132,20 +130,6 @@ class User extends Base {
   confirm_new_password: string
 
   comparePassword: (current_password: string) => Promise<boolean>
-
-  @BeforeUpdate
-  @BeforeCreate
-  static async setUserPassword(instance: User): Promise<void> {
-    const { new_password, confirm_new_password } = instance
-
-    if (new_password ?? confirm_new_password) {
-      const formPassword = { new_password, confirm_new_password }
-      const validPassword = userSchema.createPassword.parse(formPassword)
-
-      const hash = await hashing.hash(validPassword.new_password)
-      instance.setDataValue('password', hash)
-    }
-  }
 }
 
 // compare password

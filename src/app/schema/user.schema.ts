@@ -26,12 +26,12 @@ const changePassword = passwordForm
 
 const create = passwordForm
   .extend({
-    fullname: z
+    username: z
       .string({
-        required_error: 'fullname is required',
-        invalid_type_error: 'fullname must be a string',
+        required_error: 'username is required',
+        invalid_type_error: 'username must be a string',
       })
-      .min(2, "fullname can't be empty"),
+      .min(2, "username can't be empty"),
 
     email: z
       .string({
@@ -42,7 +42,6 @@ const create = passwordForm
       .min(2, "email can't be empty"),
 
     phone: z.string().nullable(),
-    token_verify: z.string().nullable(),
     upload_id: z
       .string()
       .uuid({ message: 'upload_id invalid uuid format' })

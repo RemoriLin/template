@@ -6,25 +6,28 @@ import { hashing } from '~/config/hashing'
 import { logger } from '~/config/pino'
 import { default as ConstRole } from '~/core/constants/ConstRole'
 
-const defaultPassword = 'Padang123'
+const defaultPassword = 'Basecamp123'
 
 logger.info(`Seed - your default password: ${green(defaultPassword)}`)
 
 const data = [
   {
-    fullname: 'Super Admin',
+    username: 'Admin',
     email: 'super.admin@mail.com',
-    role_id: ConstRole.ID_SUPER_ADMIN,
-  },
-  {
-    fullname: 'Admin',
-    email: 'admin@mail.com',
     role_id: ConstRole.ID_ADMIN,
+    phone: '08123456789',
   },
   {
-    fullname: 'Test User',
+    username: 'Test Host',
+    email: 'test.host@mail.com',
+    role_id: ConstRole.ID_HOST,
+    phone: '08987654321',
+  },
+  {
+    username: 'Test User',
     email: 'test.user@mail.com',
     role_id: ConstRole.ID_USER,
+    phone: '08123412345',
   },
 ]
 

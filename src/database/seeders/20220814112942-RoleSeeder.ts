@@ -4,12 +4,12 @@ import { default as ConstRole } from '~/core/constants/ConstRole'
 
 const data = [
   {
-    id: ConstRole.ID_SUPER_ADMIN,
-    name: 'Super Admin',
-  },
-  {
     id: ConstRole.ID_ADMIN,
     name: 'Admin',
+  },
+  {
+    id: ConstRole.ID_HOST,
+    name: 'Host',
   },
   {
     id: ConstRole.ID_USER,

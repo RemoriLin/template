@@ -36,7 +36,7 @@ class Session extends Base {
   user_id: string
 
   @BelongsTo(() => User)
-  user: User
+  user: Awaited<User>
 
   @Column({ type: DataType.TEXT, allowNull: false })
   token: string

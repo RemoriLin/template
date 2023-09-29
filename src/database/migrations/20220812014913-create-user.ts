@@ -1,6 +1,6 @@
 'use strict'
 
-import { DataTypes, QueryInterface } from 'sequelize'
+import { DataTypes, QueryInterface, Sequelize as SEQUELIZE } from 'sequelize'
 
 export async function up(
   queryInterface: QueryInterface,
@@ -24,7 +24,7 @@ export async function up(
     deleted_at: {
       type: Sequelize.DATE,
     },
-    fullname: {
+    username: {
       allowNull: false,
       type: Sequelize.STRING,
     },
@@ -37,10 +37,16 @@ export async function up(
       type: Sequelize.STRING,
     },
     phone: {
+      allowNull: false,
       type: Sequelize.STRING('20'),
     },
-    token_verify: {
-      type: Sequelize.TEXT,
+    saldo: {
+      allowNull: true,
+      type: Sequelize.INTEGER,
+    },
+    photo: {
+      allowNull: true,
+      type: Sequelize.STRING,
     },
     is_active: {
       allowNull: false,
@@ -61,14 +67,13 @@ export async function up(
         key: 'id',
       },
     },
-    upload_id: {
+    otp: {
       allowNull: true,
-      type: Sequelize.UUID,
-      defaultValue: Sequelize.UUIDV4,
-      references: {
-        model: 'upload',
-        key: 'id',
-      },
+      type: Sequelize.STRING,
+    },
+    otp_expired_date: {
+      allowNull: true,
+      type: DataTypes.DATE,
     },
   })
 
@@ -76,6 +81,12 @@ export async function up(
     type: 'unique',
     fields: ['email'],
     name: 'UNIQUE_USERS_EMAIL',
+  })
+
+  await queryInterface.addConstraint('user', {
+    type: 'unique',
+    fields: ['phone'],
+    name: 'UNIQUE_USERS_PHONE',
   })
 }
 

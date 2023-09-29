@@ -3,7 +3,7 @@ export interface DtoLogin {
   user: {
     uid: string
   }
-  fullname: string
+  username: string
   accessToken: string
   expiresIn: number
   message: string
